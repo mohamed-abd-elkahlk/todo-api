@@ -10,7 +10,7 @@ use rocket::{
     serde::{Deserialize, Serialize},
     Build, Rocket,
 };
-use routes::{create_todo, get_todos};
+use routes::{complete_todo, create_todo, delete_todo, get_all_todos, get_todo};
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
 pub struct Todo {
     id: i64,
@@ -31,7 +31,15 @@ fn index() -> &'static str {
 async fn rocket() -> Rocket<Build> {
     dotenv().ok(); // Load the .env file
     let db_pool = setup_db().await;
-    rocket::build()
-        .manage(db_pool)
-        .mount("/", routes![index, create_todo, get_todos])
+    rocket::build().manage(db_pool).mount(
+        "/",
+        routes![
+            index,
+            create_todo,
+            get_all_todos,
+            delete_todo,
+            complete_todo,
+            get_todo
+        ],
+    )
 }

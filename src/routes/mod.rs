@@ -25,13 +25,39 @@ pub async fn create_todo(
 }
 
 #[get("/todo")]
-pub async fn get_todos(db_pool: &rocket::State<SqlitePool>) -> Json<Vec<Todo>> {
+pub async fn get_all_todos(db_pool: &rocket::State<SqlitePool>) -> Json<Vec<Todo>> {
     let todos = sqlx::query_as::<_, Todo>("SELECT * FROM todos")
         .fetch_all(db_pool.inner())
         .await
         .unwrap();
     Json(todos)
 }
-// pub fn delete_todo() {}
-// pub fn update_todo() {}
-// pub fn get_all_todos() {}
+#[delete("/todo/<id>")]
+pub async fn delete_todo(db_pool: &rocket::State<SqlitePool>, id: i64) -> &'static str {
+    sqlx::query!("DELETE FROM todos WHERE id = ?", id)
+        .execute(db_pool.inner())
+        .await
+        .unwrap();
+    "Todo deleted!"
+}
+#[put("/todo/<id>")]
+pub async fn complete_todo(db_pool: &rocket::State<SqlitePool>, id: i64) -> &'static str {
+    sqlx::query!("UPDATE todos SET completed = true WHERE id = ?", id)
+        .execute(db_pool.inner())
+        .await
+        .unwrap();
+    "Todo completed!"
+}
+#[get("/todo/<id>")]
+pub async fn get_todo(db_pool: &rocket::State<SqlitePool>, id: i64) -> Json<Todo> {
+    let record = sqlx::query!("SELECT id, title, completed FROM todos WHERE id = ?", id)
+        .fetch_one(db_pool.inner())
+        .await
+        .unwrap();
+    let todo = Todo {
+        id: record.id,
+        title: record.title,
+        completed: record.completed != 0, // Convert i64 to bool
+    };
+    Json(todo)
+}
