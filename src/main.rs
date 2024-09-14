@@ -1,28 +1,37 @@
 #[macro_use]
 extern crate rocket;
+mod db;
+mod routes;
 
-use rocket::serde::{Deserialize, Serialize};
-use sqlx::sqlite::SqlitePool;
-#[derive(Serialize, Deserialize)]
-struct Todo {
+use dotenv::dotenv;
+
+use db::setup_db;
+use rocket::{
+    serde::{Deserialize, Serialize},
+    Build, Rocket,
+};
+use routes::{create_todo, get_todos};
+#[derive(Serialize, Deserialize, sqlx::FromRow)]
+pub struct Todo {
     id: i64,
     title: String,
     completed: bool,
 }
+#[derive(Deserialize)]
+pub struct NewTodo {
+    title: String,
+}
+
+#[get("/")]
+fn index() -> &'static str {
+    "Hello, world!"
+}
 
 #[launch]
-async fn rocket() -> Result<(), rocket::Error> {
-    let db_pool = SqlitePool::connect("sqlite://Database.db").await.unwrap();
-    sqlx::query(
-        "CREATE IF NOT EXISTS todos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            completed BOOL NOT NULL DEFAULT 0
-        )",
-    )
-    .execute(&db_pool)
-    .await
-    .unwrap();
-    rocket::build().manage(db_pool).launch().await?;
-    Ok(())
+async fn rocket() -> Rocket<Build> {
+    dotenv().ok(); // Load the .env file
+    let db_pool = setup_db().await;
+    rocket::build()
+        .manage(db_pool)
+        .mount("/", routes![index, create_todo, get_todos])
 }
