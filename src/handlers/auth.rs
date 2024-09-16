@@ -10,7 +10,7 @@ use rocket::{
     http::{Cookie, CookieJar, Status},
     serde::json::Json,
 };
-use sqlx::{query, SqlitePool};
+use sqlx::SqlitePool;
 use todo_api::{get_current_timestamp, get_expiration_time};
 
 // TODO: creat macro for password hash
@@ -33,28 +33,19 @@ pub async fn register_user(
     };
 
     // Insert the new user into the database
-    let query_result = query!(
+    let query_result = sqlx::query!(
         "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
         new_user.username,
         new_user.email,
         password_hash
     )
     .execute(db_pool.inner())
-    .await;
-
-    // Check for database errors
-    if let Err(e) = query_result {
-        return Err(format!("Database error: {}", e));
-    }
-    let last_id = query!("SELECT last_insert_rowid() as id")
-        .fetch_one(db_pool.inner())
-        .await
-        .unwrap()
-        .id;
+    .await
+    .unwrap();
 
     // Return the user with the newly inserted ID
     let user = User {
-        id: Some(last_id),
+        id: Some(query_result.last_insert_rowid()),
         username: new_user.username.clone(),
         email: new_user.email.clone(),
         password: None, // Optionally omit password from response for security

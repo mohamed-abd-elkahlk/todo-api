@@ -12,3 +12,18 @@ pub struct Todo {
 pub struct NewTodo {
     pub title: String,
 }
+
+#[derive(Deserialize, FromForm)]
+pub struct Pagination {
+    pub page: Option<usize>,
+    pub page_size: Option<usize>,
+}
+// Struct to return paginated data and metadata
+#[derive(Serialize)]
+pub struct PagedResponse<T> {
+    pub items: Vec<T>,
+    pub total_pages: usize,
+    pub total_items: usize,
+    pub current_page: usize,
+    pub page_size: usize,
+}
