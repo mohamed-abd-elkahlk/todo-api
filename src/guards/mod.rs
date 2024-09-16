@@ -4,8 +4,12 @@ use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use rocket::http::Status;
 use rocket::request::{self, FromRequest, Outcome, Request};
 
+use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
-
+#[derive(Debug, Serialize)]
+pub struct ErrorResponse {
+    error: String,
+}
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
     sub: String, // Subject (typically the user ID)
@@ -48,4 +52,10 @@ fn verify_token(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
     // Decode the token
     let token_data = decode::<Claims>(token, &decoding_key, &validation)?;
     Ok(token_data.claims) // Return the claims if valid
+}
+#[catch(401)]
+pub fn unauthorized() -> Json<ErrorResponse> {
+    Json(ErrorResponse {
+        error: "Unauthorized: Invalid token".to_string(),
+    })
 }
