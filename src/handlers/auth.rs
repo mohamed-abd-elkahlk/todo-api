@@ -1,6 +1,6 @@
 use std::env;
 
-use crate::models::user::User;
+use crate::{guards::Claims, models::user::User};
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
     Argon2, PasswordHash, PasswordVerifier,
@@ -11,6 +11,7 @@ use rocket::{
     serde::json::Json,
 };
 use sqlx::{query, SqlitePool};
+use todo_api::{get_current_timestamp, get_expiration_time};
 
 // TODO: creat macro for password hash
 
@@ -21,8 +22,12 @@ pub async fn register_user(
 ) -> Result<Json<User>, String> {
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
-    let password = new_user.password.as_bytes();
-    let password_hash = match argon2.hash_password(password, &salt) {
+    let password_bytes = Some(&new_user.password)
+        .unwrap()
+        .as_deref()
+        .map(|p| p.as_bytes())
+        .unwrap_or(&b""[..]); // Default
+    let password_hash = match argon2.hash_password(password_bytes, &salt) {
         Ok(hash) => hash.to_string(),
         Err(_) => return Err("Error hashing the password".to_string()),
     };
@@ -52,7 +57,7 @@ pub async fn register_user(
         id: Some(last_id),
         username: new_user.username.clone(),
         email: new_user.email.clone(),
-        password: password_hash, // Optionally omit password from response for security
+        password: None, // Optionally omit password from response for security
     };
 
     Ok(Json(user))
@@ -91,8 +96,13 @@ pub async fn login(
     // Check password hash
     let parsed_hash =
         PasswordHash::new(&record.password).map_err(|_| "Failed to parse password hash")?;
+    let password = user
+        .password
+        .as_deref()
+        .map(|f| f.to_string())
+        .expect("error while parse the password");
     let password_verification =
-        Argon2::default().verify_password(user.password.as_bytes(), &parsed_hash);
+        Argon2::default().verify_password(password.as_bytes(), &parsed_hash);
 
     if password_verification.is_err() {
         return Err("Invalid password".to_string());
@@ -103,18 +113,26 @@ pub async fn login(
         email: record.email,
         username: record.username,
         id: Some(record.id.expect("ID missing in the database record")),
-        password: "".to_string(), // Do not return the password
+        password: None, // Do not return the password
     };
     let secret_key = env::var("SECRET_KEY").expect("SECRET_KEY not found");
+
+    let claims = Claims {
+        exp: get_expiration_time(3600), // Implement this function as needed
+        sub: response_user
+            .id
+            .map(|b| b.to_string())
+            .expect("error while parse id to string"),
+        iat: get_current_timestamp(),
+    };
     let token = encode(
         &Header::default(),
-        &response_user,
+        &claims,
         &EncodingKey::from_secret(secret_key.as_ref()),
     )
     .map_err(|_| Status::InternalServerError)
     .unwrap();
-
-    cookies.add_private(Cookie::build(("auth_token", token.clone())).http_only(true));
+    cookies.add(Cookie::build(("auth_token", token)).http_only(true));
 
     Ok(Json(response_user))
 }

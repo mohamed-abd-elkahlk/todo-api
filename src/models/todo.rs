@@ -1,6 +1,7 @@
 use rocket::serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
+
 pub struct Todo {
     pub id: i64,
     pub title: String,
