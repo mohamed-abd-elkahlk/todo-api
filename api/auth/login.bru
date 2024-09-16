@@ -1,18 +1,18 @@
 meta {
-  name: register
+  name: login
   type: http
-  seq: 1
+  seq: 2
 }
 
 post {
-  url: http://127.0.0.1:8000/auth/register
+  url: http://127.0.0.1:8000/auth/login
   body: json
   auth: none
 }
 
 body:json {
   {
-    "username":"mohamed",
+      "username":"mohamed",
     "email":"mohamed@gmial.com",
     "password":"matrix"
   }

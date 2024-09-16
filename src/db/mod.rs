@@ -14,7 +14,7 @@ pub async fn setup_db() -> Pool<Sqlite> {
             username TEXT NOT NULL UNIQUE,
             email TEXT NOT NULL UNIQUE,
             password TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT DEFAULT (datetime('now'))
         )",
     )
     .execute(&db_pool)

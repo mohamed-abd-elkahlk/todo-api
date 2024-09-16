@@ -4,6 +4,7 @@ use rocket::serde::{Deserialize, Serialize};
 pub struct Todo {
     pub id: i64,
     pub title: String,
+    pub user_id: i64,
     pub completed: bool,
 }
 #[derive(Deserialize)]
