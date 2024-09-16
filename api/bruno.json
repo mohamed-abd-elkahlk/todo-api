@@ -1,9 +1,0 @@
-{
-  "version": "1",
-  "name": "todo api with rust",
-  "type": "collection",
-  "ignore": [
-    "node_modules",
-    ".git"
-  ]
-}
