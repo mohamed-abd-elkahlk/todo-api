@@ -1,45 +1,20 @@
 #[macro_use]
 extern crate rocket;
 mod db;
+mod handlers;
+mod models;
 mod routes;
 
 use dotenv::dotenv;
 
 use db::setup_db;
-use rocket::{
-    serde::{Deserialize, Serialize},
-    Build, Rocket,
-};
-use routes::{complete_todo, create_todo, delete_todo, get_all_todos, get_todo};
-#[derive(Serialize, Deserialize, sqlx::FromRow)]
-pub struct Todo {
-    id: i64,
-    title: String,
-    completed: bool,
-}
-#[derive(Deserialize)]
-pub struct NewTodo {
-    title: String,
-}
-
-#[get("/")]
-fn index() -> &'static str {
-    "Hello, world!"
-}
-
+use rocket::{Build, Rocket};
 #[launch]
 async fn rocket() -> Rocket<Build> {
-    dotenv().ok(); // Load the .env file
+    dotenv().ok();
     let db_pool = setup_db().await;
-    rocket::build().manage(db_pool).mount(
-        "/",
-        routes![
-            index,
-            create_todo,
-            get_all_todos,
-            delete_todo,
-            complete_todo,
-            get_todo
-        ],
-    )
+    rocket::build()
+        .manage(db_pool)
+        .mount("/", routes::get_todo_routes())
+        .mount("/auth", routes::get_auth_routes())
 }

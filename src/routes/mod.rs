@@ -1,63 +1,19 @@
-use crate::{NewTodo, Todo};
-use rocket::serde::json::Json;
-use sqlx::SqlitePool;
+use crate::handlers::{
+    auth::register_user,
+    todo::{complete_todo, create_todo, delete_todo, get_all_todos, get_todo},
+};
+use rocket::Route;
 
-#[post("/todo", format = "json", data = "<new_todo>")]
-pub async fn create_todo(
-    db_pool: &rocket::State<SqlitePool>,
-    new_todo: Json<NewTodo>,
-) -> Json<Todo> {
-    let result = sqlx::query!(
-        "INSERT INTO todos (title, completed) VALUES (?, ?)",
-        new_todo.title,
-        false
-    )
-    .execute(db_pool.inner())
-    .await
-    .unwrap();
-
-    let todo = Todo {
-        id: result.last_insert_rowid(),
-        title: new_todo.title.clone(),
-        completed: false,
-    };
-    Json(todo)
+pub fn get_todo_routes() -> Vec<Route> {
+    routes![
+        get_todo,
+        create_todo,
+        complete_todo,
+        delete_todo,
+        get_all_todos
+    ]
 }
 
-#[get("/todo")]
-pub async fn get_all_todos(db_pool: &rocket::State<SqlitePool>) -> Json<Vec<Todo>> {
-    let todos = sqlx::query_as::<_, Todo>("SELECT * FROM todos")
-        .fetch_all(db_pool.inner())
-        .await
-        .unwrap();
-    Json(todos)
-}
-#[delete("/todo/<id>")]
-pub async fn delete_todo(db_pool: &rocket::State<SqlitePool>, id: i64) -> &'static str {
-    sqlx::query!("DELETE FROM todos WHERE id = ?", id)
-        .execute(db_pool.inner())
-        .await
-        .unwrap();
-    "Todo deleted!"
-}
-#[put("/todo/<id>")]
-pub async fn complete_todo(db_pool: &rocket::State<SqlitePool>, id: i64) -> &'static str {
-    sqlx::query!("UPDATE todos SET completed = true WHERE id = ?", id)
-        .execute(db_pool.inner())
-        .await
-        .unwrap();
-    "Todo completed!"
-}
-#[get("/todo/<id>")]
-pub async fn get_todo(db_pool: &rocket::State<SqlitePool>, id: i64) -> Json<Todo> {
-    let record = sqlx::query!("SELECT id, title, completed FROM todos WHERE id = ?", id)
-        .fetch_one(db_pool.inner())
-        .await
-        .unwrap();
-    let todo = Todo {
-        id: record.id,
-        title: record.title,
-        completed: record.completed != 0, // Convert i64 to bool
-    };
-    Json(todo)
+pub fn get_auth_routes() -> Vec<Route> {
+    routes![register_user]
 }
